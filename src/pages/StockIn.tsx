@@ -1,5 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/lib/db';
+import {
+  getProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  getCategories,
+  getPaymentMethods,
+} from '@/lib/supabase-db';
 import { useState } from 'react';
 import { ArrowDownToLine, Plus, Search, ChevronLeft } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
