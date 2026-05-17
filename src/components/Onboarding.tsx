@@ -126,39 +126,84 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   };
 
   const handleFinish = async () => {
-    if (!storeName.trim()) return;
-    setSaving(true);
-    try {
-      const existing = await db.storeSettings.toCollection().first();
-      if (existing?.id) {
-        await db.storeSettings.update(existing.id, {
-          storeName: storeName.trim(),
-          address: address.trim(),
-          phone: phone.trim(),
-          onboardingDone: true,
-          themeColor,
-        });
-      } else {
-        await db.storeSettings.add({
-          storeName: storeName.trim(),
-          address: address.trim(),
-          phone: phone.trim(),
-          receiptFooter: 'Terima kasih atas kunjungan Anda!',
-          onboardingDone: true,
-          lastBackupAt: null,
-          themeColor,
-        });
-      }
 
-      if (loadDummy) {
-        await seedDummyData();
-      }
+  console.log("Tombol diklik");
 
-      onComplete();
-    } finally {
-      setSaving(false);
+  if (!storeName.trim()) return;
+
+  setSaving(true);
+
+  try {
+
+    console.log("Mulai simpan");
+
+    const existing = await db.storeSettings.toCollection().first();
+
+    console.log("Existing:", existing);
+
+    if (existing?.id) {
+
+      await db.storeSettings.update(existing.id, {
+
+        storeName: storeName.trim(),
+
+        address: address.trim(),
+
+        phone: phone.trim(),
+
+        onboardingDone: true,
+
+        themeColor,
+
+      });
+
+    } else {
+
+      await db.storeSettings.add({
+
+        storeName: storeName.trim(),
+
+        address: address.trim(),
+
+        phone: phone.trim(),
+
+        receiptFooter: 'Terima kasih',
+
+        onboardingDone: true,
+
+        lastBackupAt: null,
+
+        themeColor,
+
+      });
+
     }
-  };
+
+    console.log("Berhasil simpan");
+
+    if (loadDummy) {
+
+      await seedDummyData();
+
+    }
+
+    console.log("Panggil onComplete");
+
+    onComplete();
+
+  } catch (err) {
+
+    console.error("ERROR HANDLE FINISH:", err);
+
+    alert(JSON.stringify(err));
+
+  } finally {
+
+    setSaving(false);
+
+  }
+
+};
 
   return (
     <div className="fixed inset-x-0 top-0 z-[100] bg-background max-w-lg md:max-w-6xl mx-auto overflow-y-auto" style={{ height: '100dvh', WebkitOverflowScrolling: 'touch' }}>
