@@ -1,7 +1,14 @@
 import { X, Download } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { db } from '@/lib/db';
+import {
+  getProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  getCategories,
+  getPaymentMethods,
+} from '@/lib/supabase-db';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 
