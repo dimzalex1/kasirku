@@ -20,7 +20,16 @@ export default function StockReport() {
   const days = Number(period);
   const since = startOfDay(subDays(new Date(), days));
 
-  const products = useLiveQuery(() => db.products.toArray());
+  const [products, setProducts] = useState<any[]>([]);
+
+async function loadProducts() {
+  const data = await getProducts();
+  setProducts(data ?? []);
+}
+
+useEffect(() => {
+  loadProducts();
+}, []);
   const stockIns = useLiveQuery(async () => db.stockIns.where('date').aboveOrEqual(since).toArray(), [days]);
   const stockOuts = useLiveQuery(async () => db.stockOuts.where('date').aboveOrEqual(since).toArray(), [days]);
 
