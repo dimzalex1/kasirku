@@ -313,7 +313,7 @@ export async function seedDefaultData() {
       receiptFooter: 'Terima kasih atas kunjungan Anda!',
       onboardingDone: false,
       lastBackupAt: null,
-      deviceId: crypto.randomUUID(),
+      deviceId: Date.now().toString(),
     });
   } else {
     // Fallback: if storeSettings exists but has no deviceId, generate one
