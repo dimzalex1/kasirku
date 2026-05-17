@@ -4,7 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { db } from '@/lib/db';
+import {
+  getProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  getCategories,
+  getPaymentMethods,
+} from '@/lib/supabase-db';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import ThemeColorPicker from '@/components/ThemeColorPicker';
