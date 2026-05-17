@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { format, subDays, startOfDay } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { useEffect, useState } from 'react';
 
 export default function StockReport() {
   const [period, setPeriod] = useState<'7' | '30'>('7');
