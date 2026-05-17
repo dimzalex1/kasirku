@@ -1,6 +1,13 @@
 import { useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/lib/db';
+import {
+  getProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  getCategories,
+  getPaymentMethods,
+} from '@/lib/supabase-db';
 
 // Predefined theme color options with HSL values
 export const THEME_COLORS = [
