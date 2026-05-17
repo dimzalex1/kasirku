@@ -192,7 +192,7 @@ class PosDatabase extends Dexie {
       // CR-1: Generate deviceId for existing storeSettings
       const storeTable = tx.table('storeSettings');
       await storeTable.toCollection().modify((s: any) => {
-        s.deviceId: Date.now().toString(),;
+        s.deviceId = Date.now().toString();
       });
 
       // CR-5: Migrate embedded items[] from transactions to transactionItems table
