@@ -12,6 +12,7 @@ import {
   getCategories,
   getPaymentMethods,
 } from '@/lib/supabase-db';
+import { db } from '@/lib/db';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import ThemeColorPicker from '@/components/ThemeColorPicker';
