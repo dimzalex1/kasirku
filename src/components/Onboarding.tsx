@@ -127,22 +127,24 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   };
 
   const handleFinish = async () => {
+  console.log("1. Tombol diklik");
 
-  console.log("Tombol diklik");
-
-  if (!storeName.trim()) return;
+  if (!storeName.trim()) {
+    console.log("2. Store name kosong");
+    return;
+  }
 
   setSaving(true);
 
   try {
-
-    console.log("Mulai simpan");
+    console.log("3. Sebelum akses DB");
 
     const existing = await db.storeSettings.toCollection().first();
 
-    console.log("Existing:", existing);
+    console.log("4. Existing data:", existing);
 
     if (existing?.id) {
+      console.log("5. Update store");
 
       await db.storeSettings.update(existing.id, {
         storeName: storeName.trim(),
@@ -152,7 +154,9 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         themeColor,
       });
 
+      console.log("6. Update berhasil");
     } else {
+      console.log("7. Add store baru");
 
       await db.storeSettings.add({
         storeName: storeName.trim(),
@@ -164,30 +168,36 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         themeColor,
       });
 
+      console.log("8. Add berhasil");
     }
-
-    console.log("Berhasil simpan");
 
     if (loadDummy) {
+      console.log("9. Mulai dummy data");
+
       await seedDummyData();
+
+      console.log("10. Dummy selesai");
     }
 
-    console.log("Panggil onComplete");
+    console.log("11. Sebelum onComplete");
 
     onComplete();
 
-  } catch (err) {
+    console.log("12. onComplete selesai");
 
+  } catch (err) {
     console.error("ERROR HANDLE FINISH:", err);
 
-    alert(JSON.stringify(err));
-
+    alert(
+      err instanceof Error
+        ? err.message
+        : JSON.stringify(err)
+    );
   } finally {
+    console.log("13. Finally jalan");
 
     setSaving(false);
-
   }
-
 };
   return (
     <div className="fixed inset-x-0 top-0 z-[100] bg-background max-w-lg md:max-w-6xl mx-auto overflow-y-auto" style={{ height: '100dvh', WebkitOverflowScrolling: 'touch' }}>
