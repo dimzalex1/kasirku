@@ -1,14 +1,56 @@
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Product, type Category } from '@/lib/db';
-import { useState, useRef } from 'react';
-import { Plus, Search, Edit2, Trash2, Package as PackageIcon, Camera, X, Copy } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import type { Product, Category } from '@/lib/db';
+
+import {
+  getProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  getCategories,
+} from '@/lib/supabase-db';
+
+import {
+  Plus,
+  Search,
+  Edit2,
+  Trash2,
+  Package as PackageIcon,
+  Camera,
+  X,
+  Copy,
+} from 'lucide-react';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { compressImage } from '@/lib/image-utils';
@@ -17,103 +59,172 @@ import { toast } from 'sonner';
 export default function Produk() {
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [editProduct, setEditProduct] = useState<Product | null>(null);
 
-  // Form state
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+
+  const [editProduct, setEditProduct] = useState<any | null>(null);
+
+  const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+
+  // Form
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
-  const [categoryId, setCategoryId] = useState<string>('');
+  const [categoryId, setCategoryId] = useState('');
   const [price, setPrice] = useState('');
   const [hpp, setHpp] = useState('');
   const [stock, setStock] = useState('');
   const [unit, setUnit] = useState('pcs');
   const [barcode, setBarcode] = useState('');
   const [photo, setPhoto] = useState<string | undefined>(undefined);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const products = useLiveQuery(() => db.products.where('isDeleted').equals(0).toArray());
-  const categories = useLiveQuery(() => db.categories.where('isDeleted').equals(0).toArray());
+  const loadData = async () => {
+    try {
+      const prod = await getProducts();
+      const cat = await getCategories();
 
-  const filtered = products?.filter(p => {
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase());
-    const matchCategory = filterCategory === 'all' || p.categoryId === Number(filterCategory);
+      setProducts(prod || []);
+      setCategories(cat || []);
+    } catch (err) {
+      console.error(err);
+      toast.error('Gagal memuat data');
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const filtered = products.filter((p) => {
+    const matchSearch =
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.sku.toLowerCase().includes(search.toLowerCase());
+
+    const matchCategory =
+      filterCategory === 'all' ||
+      p.category_id === Number(filterCategory);
+
     return matchSearch && matchCategory;
-  }) ?? [];
+  });
 
-  const getCategoryName = (catId: number) => categories?.find(c => c.id === catId)?.name ?? '-';
-  const getCategoryColor = (catId: number) => categories?.find(c => c.id === catId)?.color ?? '#999';
+  const getCategoryName = (catId: number) =>
+    categories.find((c) => c.id === catId)?.name ?? '-';
+
+  const getCategoryColor = (catId: number) =>
+    categories.find((c) => c.id === catId)?.color ?? '#999';
 
   const openAdd = () => {
     setEditProduct(null);
-    setName(''); setSku(''); setCategoryId(categories?.[0]?.id?.toString() ?? ''); setPrice(''); setHpp(''); setStock(''); setUnit('pcs'); setBarcode(''); setPhoto(undefined);
+
+    setName('');
+    setSku('');
+    setCategoryId(categories?.[0]?.id?.toString() ?? '');
+    setPrice('');
+    setHpp('');
+    setStock('');
+    setUnit('pcs');
+    setBarcode('');
+    setPhoto(undefined);
+
     setDialogOpen(true);
   };
 
-  const openEdit = (p: Product) => {
+  const openEdit = (p: any) => {
     setEditProduct(p);
-    setName(p.name); setSku(p.sku); setCategoryId(p.categoryId.toString()); setPrice(p.price.toString()); setHpp(p.hpp.toString()); setStock(p.stock.toString()); setUnit(p.unit); setBarcode(p.barcode ?? ''); setPhoto(p.photo);
+
+    setName(p.name);
+    setSku(p.sku);
+    setCategoryId(p.category_id.toString());
+    setPrice(p.price.toString());
+    setHpp(p.hpp.toString());
+    setStock(p.stock.toString());
+    setUnit(p.unit);
+    setBarcode(p.barcode ?? '');
+    setPhoto(p.photo ?? undefined);
+
     setDialogOpen(true);
   };
 
-  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = e.target.files?.[0];
+
     if (!file) return;
+
     if (!file.type.startsWith('image/')) {
       toast.error('File harus berupa gambar');
       return;
     }
+
     try {
       const compressed = await compressImage(file);
       setPhoto(compressed);
     } catch {
       toast.error('Gagal memproses gambar');
     }
-    // Reset input so same file can be selected again
-    if (fileInputRef.current) fileInputRef.current.value = '';
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleSave = async () => {
     if (!name.trim() || !categoryId || !sku.trim()) return;
 
-    // Check SKU uniqueness
-    const existing = await db.products
-      .where('sku')
-      .equals(sku.trim())
-      .filter(p => p.isDeleted === 0)
-      .first();
-    if (existing && existing.id !== editProduct?.id) {
-      toast.error(`SKU "${sku.trim()}" sudah digunakan oleh produk "${existing.name}"`);
-      return;
-    }
+    try {
+      const data = {
+        name: name.trim(),
+        sku: sku.trim(),
+        category_id: Number(categoryId),
+        price: Number(price) || 0,
+        hpp: Number(hpp) || 0,
+        stock: Number(stock) || 0,
+        unit: unit.trim() || 'pcs',
+        barcode: barcode.trim() || null,
+        photo: photo || null,
+      };
 
-    const data = {
-      name: name.trim(),
-      sku: sku.trim(),
-      categoryId: Number(categoryId),
-      price: Number(price) || 0,
-      hpp: Number(hpp) || 0,
-      stock: Number(stock) || 0,
-      unit: unit.trim() || 'pcs',
-      barcode: barcode.trim() || undefined,
-      photo: photo || undefined,
-      updatedAt: new Date(),
-    };
+      if (editProduct?.id) {
+        await updateProduct(editProduct.id, data);
 
-    if (editProduct?.id) {
-      await db.products.update(editProduct.id, data);
-    } else {
-      await db.products.add({ ...data, createdAt: new Date(), isDeleted: 0, deletedAt: null } as Product);
+        toast.success('Produk berhasil diupdate');
+      } else {
+        await createProduct(data);
+
+        toast.success('Produk berhasil ditambahkan');
+      }
+
+      await loadData();
+
+      setDialogOpen(false);
+    } catch (err) {
+      console.error(err);
+
+      toast.error('Gagal menyimpan produk');
     }
-    setDialogOpen(false);
   };
 
   const handleDelete = async () => {
-    if (deleteId) {
-      await db.products.update(deleteId, { isDeleted: 1, deletedAt: new Date() });
-      setDeleteId(null);
+    if (!deleteId) return;
+
+    try {
+      await deleteProduct(deleteId);
+
+      await loadData();
+
+      toast.success('Produk berhasil dihapus');
+    } catch (err) {
+      console.error(err);
+
+      toast.error('Gagal menghapus produk');
     }
+
+    setDeleteId(null);
   };
 
   return (
@@ -124,85 +235,161 @@ export default function Produk() {
           <PackageIcon className="w-5 h-5 text-primary" />
           Produk
         </h1>
-        <Button size="sm" onClick={openAdd} className="h-9 gap-1.5">
+
+        <Button
+          size="sm"
+          onClick={openAdd}
+          className="h-9 gap-1.5"
+        >
           <Plus className="w-4 h-4" />
           Tambah
         </Button>
       </div>
 
-      {/* Search & Filter */}
+      {/* Search */}
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+
           <Input
             placeholder="Cari produk..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             className="pl-9 h-10"
           />
         </div>
-        <Select value={filterCategory} onValueChange={setFilterCategory}>
+
+        <Select
+          value={filterCategory}
+          onValueChange={setFilterCategory}
+        >
           <SelectTrigger className="w-[120px] h-10">
             <SelectValue placeholder="Kategori" />
           </SelectTrigger>
+
           <SelectContent>
             <SelectItem value="all">Semua</SelectItem>
-            {categories?.map(c => (
-              <SelectItem key={c.id} value={c.id!.toString()}>{c.icon} {c.name}</SelectItem>
+
+            {categories?.map((c) => (
+              <SelectItem
+                key={c.id}
+                value={c.id!.toString()}
+              >
+                {c.icon} {c.name}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      {/* Product count */}
-      <p className="text-xs text-muted-foreground">{filtered.length} produk ditemukan</p>
+      {/* Count */}
+      <p className="text-xs text-muted-foreground">
+        {filtered.length} produk ditemukan
+      </p>
 
-      {/* Product List */}
+      {/* Product list */}
       {filtered.length === 0 ? (
         <div className="text-center py-12">
           <PackageIcon className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
-          <p className="text-sm text-muted-foreground">Belum ada produk</p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={openAdd}>
-            <Plus className="w-4 h-4 mr-1" /> Tambah Produk
+
+          <p className="text-sm text-muted-foreground">
+            Belum ada produk
+          </p>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={openAdd}
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Tambah Produk
           </Button>
         </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map(p => (
+          {filtered.map((p) => (
             <Card key={p.id} className="border-0 shadow-sm">
               <CardContent className="p-3">
                 <div className="flex items-start gap-3">
-                  {/* Product thumbnail */}
                   <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
                     {p.photo ? (
-                      <img src={p.photo} alt={p.name} className="w-full h-full object-cover" />
+                      <img
+                        src={p.photo}
+                        alt={p.name}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <PackageIcon className="w-5 h-5 text-muted-foreground/40" />
                     )}
                   </div>
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold truncate">{p.name}</h3>
-                      <Badge variant="outline" className="text-[10px] shrink-0" style={{ borderColor: getCategoryColor(p.categoryId), color: getCategoryColor(p.categoryId) }}>
-                        {getCategoryName(p.categoryId)}
+                      <h3 className="text-sm font-semibold truncate">
+                        {p.name}
+                      </h3>
+
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] shrink-0"
+                        style={{
+                          borderColor: getCategoryColor(
+                            p.category_id
+                          ),
+                          color: getCategoryColor(
+                            p.category_id
+                          ),
+                        }}
+                      >
+                        {getCategoryName(p.category_id)}
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">SKU: {p.sku || '-'}</p>
+
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      SKU: {p.sku || '-'}
+                    </p>
+
                     <div className="flex items-center gap-3 mt-1.5">
-                      <span className="text-sm font-bold text-primary">Rp {p.price.toLocaleString('id-ID')}</span>
-                      <span className="text-xs text-muted-foreground">HPP: Rp {p.hpp.toLocaleString('id-ID')}</span>
+                      <span className="text-sm font-bold text-primary">
+                        Rp {p.price.toLocaleString('id-ID')}
+                      </span>
+
+                      <span className="text-xs text-muted-foreground">
+                        HPP: Rp {p.hpp.toLocaleString('id-ID')}
+                      </span>
                     </div>
+
                     <div className="flex items-center gap-2 mt-1">
-                      <span className={cn('text-xs font-medium px-1.5 py-0.5 rounded', p.stock <= 5 ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>
+                      <span
+                        className={cn(
+                          'text-xs font-medium px-1.5 py-0.5 rounded',
+                          p.stock <= 5
+                            ? 'bg-destructive/10 text-destructive'
+                            : 'bg-success/10 text-success'
+                        )}
+                      >
                         Stok: {p.stock} {p.unit}
                       </span>
                     </div>
                   </div>
+
                   <div className="flex flex-col gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => openEdit(p)}
+                    >
                       <Edit2 className="w-3.5 h-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(p.id!)}>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive"
+                      onClick={() => setDeleteId(p.id)}
+                    >
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
@@ -212,146 +399,6 @@ export default function Produk() {
           ))}
         </div>
       )}
-
-      {/* Add/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-[95vw] rounded-xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editProduct ? 'Edit Produk' : 'Tambah Produk'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 mt-2">
-            {/* Photo picker */}
-            <div className="space-y-1.5">
-              <Label>Foto Produk</Label>
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-20 h-20 rounded-xl bg-muted border-2 border-dashed border-border flex items-center justify-center overflow-hidden cursor-pointer hover:border-primary/50 transition-colors"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  {photo ? (
-                    <img src={photo} alt="Preview" className="w-full h-full object-cover" />
-                  ) : (
-                    <Camera className="w-6 h-6 text-muted-foreground/50" />
-                  )}
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs gap-1.5"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Camera className="w-3.5 h-3.5" />
-                    {photo ? 'Ganti Foto' : 'Pilih Foto'}
-                  </Button>
-                  {photo && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 text-xs text-destructive gap-1.5"
-                      onClick={() => setPhoto(undefined)}
-                    >
-                      <X className="w-3.5 h-3.5" />
-                      Hapus Foto
-                    </Button>
-                  )}
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handlePhotoSelect}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Nama Produk *</Label>
-              <Input value={name} onChange={e => setName(e.target.value)} placeholder="Contoh: Nasi Goreng" className="h-11" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>SKU *</Label>
-                <Input value={sku} onChange={e => setSku(e.target.value)} placeholder="Wajib diisi, contoh: NG001" className="h-11" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Kategori *</Label>
-                <Select value={categoryId} onValueChange={setCategoryId}>
-                  <SelectTrigger className="h-11"><SelectValue placeholder="Pilih" /></SelectTrigger>
-                  <SelectContent>
-                    {categories?.map(c => (
-                      <SelectItem key={c.id} value={c.id!.toString()}>{c.icon} {c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Harga Jual *</Label>
-                <Input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="15000" className="h-11" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>HPP</Label>
-                <Input type="number" value={hpp} onChange={e => setHpp(e.target.value)} placeholder="10000" className="h-11" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Stok Awal</Label>
-                <Input type="number" value={stock} onChange={e => setStock(e.target.value)} placeholder="0" className="h-11" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Satuan</Label>
-                <Select value={unit} onValueChange={setUnit}>
-                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {['pcs', 'kg', 'gram', 'liter', 'ml', 'porsi', 'cup', 'botol', 'bungkus'].map(u => (
-                      <SelectItem key={u} value={u}>{u}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Barcode</Label>
-              <div className="flex gap-2">
-                <Input value={barcode} onChange={e => setBarcode(e.target.value)} placeholder="Opsional" className="h-11 flex-1" />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-11 w-11 shrink-0"
-                  title="Salin dari SKU"
-                  onClick={() => setBarcode(sku.trim())}
-                >
-                  <Copy className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-            <Button className="w-full h-12 text-base font-semibold" onClick={handleSave} disabled={!name.trim() || !categoryId || !sku.trim()}>
-              {editProduct ? 'Simpan Perubahan' : 'Tambah Produk'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent className="max-w-[90vw] rounded-xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Hapus Produk?</AlertDialogTitle>
-            <AlertDialogDescription>Produk yang dihapus tidak bisa dikembalikan.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">Hapus</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
