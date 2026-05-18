@@ -151,7 +151,7 @@ const txDiscountAmount =
 
 // Diskon tidak boleh melebihi subtotal
 const safeDiscountAmount = Math.min(
-  txDiscountAmount,
+  safeDiscountAmount,
   subtotal
 );
 
@@ -188,7 +188,7 @@ const totalProfit =
         subtotal,
         discountType: txDiscountType,
         discountValue: Number(txDiscountValue) || 0,
-        discountAmount: txDiscountAmount,
+        discountAmount: safeDiscountAmount,
         total,
         customerName: customerName.trim() || undefined,
         tableNumber: tableNumber.trim() || undefined,
