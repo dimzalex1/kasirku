@@ -144,38 +144,24 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     if (existing?.id) {
 
       await db.storeSettings.update(existing.id, {
-
-        storeName: storeName.trim(),
-
-        address: address.trim(),
-
-        phone: phone.trim(),
-
-        onboardingDone: true,
-
-        themeColor,
-
-      });
-
+  storeName: storeName.trim(),
+  address: address.trim(),
+  phone: phone.trim(),
+  onboardingDone: true,
+  themeColor,
+  deviceId: existing.deviceId || Date.now().toString(),
+});
     } else {
 
       await db.storeSettings.add({
-
-        storeName: storeName.trim(),
-
-        address: address.trim(),
-
-        phone: phone.trim(),
-
-        receiptFooter: 'Terima kasih',
-
-        onboardingDone: true,
-
-        lastBackupAt: null,
-
-        themeColor,
-
-      });
+  storeName: storeName.trim(),
+  address: address.trim(),
+  phone: phone.trim(),
+  receiptFooter: 'Terima kasih',
+  onboardingDone: true,
+  lastBackupAt: null,
+  themeColor,
+});
 
     }
 
