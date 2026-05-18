@@ -126,6 +126,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   };
 
   const handleFinish = async () => {
+
   console.log("Tombol diklik");
 
   if (!storeName.trim()) return;
@@ -133,6 +134,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   setSaving(true);
 
   try {
+
     console.log("Mulai simpan");
 
     const existing = await db.storeSettings.toCollection().first();
@@ -140,15 +142,17 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     console.log("Existing:", existing);
 
     if (existing?.id) {
+
       await db.storeSettings.update(existing.id, {
         storeName: storeName.trim(),
         address: address.trim(),
         phone: phone.trim(),
         onboardingDone: true,
         themeColor,
-        deviceId: existing.deviceId || Date.now().toString(),
       });
+
     } else {
+
       await db.storeSettings.add({
         storeName: storeName.trim(),
         address: address.trim(),
@@ -157,8 +161,8 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         onboardingDone: true,
         lastBackupAt: null,
         themeColor,
-        deviceId: Date.now().toString(),
       });
+
     }
 
     console.log("Berhasil simpan");
@@ -172,14 +176,18 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     onComplete();
 
   } catch (err) {
+
     console.error("ERROR HANDLE FINISH:", err);
+
     alert(JSON.stringify(err));
 
   } finally {
-    setSaving(false);
-  }
-};
 
+    setSaving(false);
+
+  }
+
+};
   return (
     <div className="fixed inset-x-0 top-0 z-[100] bg-background max-w-lg md:max-w-6xl mx-auto overflow-y-auto" style={{ height: '100dvh', WebkitOverflowScrolling: 'touch' }}>
       <div className="min-h-full flex flex-col">
