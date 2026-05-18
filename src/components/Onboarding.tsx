@@ -191,11 +191,10 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 
     onComplete();
 
-  } catch (err) {
-
-    console.error("ERROR HANDLE FINISH:", err);
-
-    alert(JSON.stringify(err));
+  } catch (error: any) {
+  console.error('ERROR DETAIL:', error);
+  alert(JSON.stringify(error, null, 2));
+}
 
   } finally {
 
