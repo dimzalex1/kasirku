@@ -142,7 +142,7 @@ export default function Kasir() {
   0
 );
 
-const txDiscountAmount =
+const safeDiscountAmount =
   txDiscountType === 'percentage'
     ? (subtotal * (Number(txDiscountValue) || 0)) / 100
     : txDiscountType === 'nominal'
