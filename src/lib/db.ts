@@ -8,24 +8,24 @@ export interface Category {
   color: string;
   icon: string;
   createdAt: Date;
-  isDeleted: number; // 0 = active, 1 = deleted (IndexedDB can't index booleans)
+  isDeleted: number; // 0 = active, 1 = deleted
   deletedAt: Date | null;
 }
 
 export interface Product {
   id?: number;
   name: string;
-  sku: string;
+  sku?: string; // ← dibuat optional agar aman untuk data lama
   categoryId: number;
-  price: number; // harga jual
-  hpp: number; // harga pokok penjualan
+  price: number;
+  hpp: number;
   stock: number;
-  unit: string; // satuan: pcs, kg, liter, dll
-  photo?: string; // base64 or blob URL
+  unit: string;
+  photo?: string;
   barcode?: string;
   createdAt: Date;
   updatedAt: Date;
-  isDeleted: number; // 0 = active, 1 = deleted
+  isDeleted: number;
   deletedAt: Date | null;
 }
 
@@ -36,7 +36,7 @@ export interface Supplier {
   address: string;
   notes: string;
   createdAt: Date;
-  isDeleted: number; // 0 = active, 1 = deleted
+  isDeleted: number;
   deletedAt: Date | null;
 }
 
@@ -45,7 +45,7 @@ export interface StockIn {
   productId: number;
   supplierId: number;
   quantity: number;
-  buyPrice: number; // harga beli per unit
+  buyPrice: number;
   totalPrice: number;
   date: Date;
   notes: string;
@@ -55,7 +55,7 @@ export interface StockOut {
   id?: number;
   productId: number;
   quantity: number;
-  reason: string; // rusak, hilang, retur, dll
+  reason: string;
   date: Date;
   notes: string;
 }
@@ -72,7 +72,7 @@ export interface HppHistory {
 export interface PaymentMethod {
   id?: number;
   name: string;
-  category: string; // tunai, transfer, e-wallet, qris
+  category: string;
   isDefault: boolean;
   createdAt: Date;
 }
@@ -122,8 +122,8 @@ export interface StoreSettings {
   receiptFooter: string;
   onboardingDone: boolean;
   lastBackupAt: Date | null;
-  themeColor?: string; // HSL hue string e.g. "25" for orange
-  logo?: string; // base64 JPEG compressed via compressImage()
+  themeColor?: string;
+  logo?: string;
   deviceId: string;
 }
 
@@ -144,7 +144,6 @@ class PosDatabase extends Dexie {
   constructor() {
     super('kasirgratisan-db');
 
-    // Version 1 — original schema (must remain for migration path)
     this.version(1).stores({
       categories: '++id, name',
       products: '++id, name, sku, categoryId, barcode',
@@ -157,7 +156,6 @@ class PosDatabase extends Dexie {
       storeSettings: '++id',
     });
 
-    // Version 2 — CR-1 to CR-5
     this.version(2).stores({
       categories: '++id, name, isDeleted',
       products: '++id, name, sku, categoryId, barcode, isDeleted',
@@ -170,7 +168,6 @@ class PosDatabase extends Dexie {
       transactionItems: '++id, transactionId, productId',
       storeSettings: '++id',
     }).upgrade(async (tx) => {
-      // CR-2: Set soft delete defaults on existing records
       const catTable = tx.table('categories');
       await catTable.toCollection().modify((cat: any) => {
         cat.isDeleted = 0;
@@ -189,94 +186,64 @@ class PosDatabase extends Dexie {
         sup.deletedAt = null;
       });
 
-      // CR-1: Generate deviceId for existing storeSettings
       const storeTable = tx.table('storeSettings');
       await storeTable.toCollection().modify((s: any) => {
-        s.deviceId = Date.now().toString();
-      });
-
-      // CR-5: Migrate embedded items[] from transactions to transactionItems table
-      const txTable = tx.table('transactions');
-      const itemsTable = tx.table('transactionItems');
-      const allTx = await txTable.toArray();
-
-      for (const t of allTx) {
-        const items = (t as any).items;
-        if (Array.isArray(items) && items.length > 0) {
-          const records = items.map((item: any) => ({
-            transactionId: t.id!,
-            productId: item.productId,
-            productName: item.productName,
-            quantity: item.quantity,
-            price: item.price,
-            hpp: item.hpp,
-            discountType: item.discountType,
-            discountValue: item.discountValue,
-            discountAmount: item.discountAmount,
-            subtotal: item.subtotal,
-          }));
-          await itemsTable.bulkAdd(records);
+        if (!s.deviceId) {
+          s.deviceId = crypto.randomUUID();
         }
-        // Remove embedded items field
-        delete (t as any).items;
-        await txTable.put(t);
-      }
-    });
-
-    // Version 3 — Open Bill: status, orderNumber, customer/table, item notes
-    this.version(3).stores({
-      categories:       '++id, name, isDeleted',
-      products:         '++id, name, sku, categoryId, barcode, isDeleted',
-      suppliers:        '++id, name, isDeleted',
-      stockIns:         '++id, productId, supplierId, date',
-      stockOuts:        '++id, productId, date',
-      hppHistory:       '++id, productId, date',
-      paymentMethods:   '++id, name, category',
-      transactions:     '++id, date, &receiptNumber, paymentMethodId, status, orderNumber',
-      transactionItems: '++id, transactionId, productId',
-      storeSettings:    '++id',
-    }).upgrade(async (tx) => {
-      // Set all existing transactions to 'completed' status
-      await tx.table('transactions').toCollection().modify((t: any) => {
-        t.status = 'completed';
       });
     });
 
-    // Version 4 — SKU unique constraint
-    this.version(4).stores({
-      categories:       '++id, name, isDeleted',
-      products:         '++id, name, &sku, categoryId, barcode, isDeleted',
-      suppliers:        '++id, name, isDeleted',
-      stockIns:         '++id, productId, supplierId, date',
-      stockOuts:        '++id, productId, date',
-      hppHistory:       '++id, productId, date',
-      paymentMethods:   '++id, name, category',
-      transactions:     '++id, date, &receiptNumber, paymentMethodId, status, orderNumber',
+    this.version(3).stores({
+      categories: '++id, name, isDeleted',
+      products: '++id, name, sku, categoryId, barcode, isDeleted',
+      suppliers: '++id, name, isDeleted',
+      stockIns: '++id, productId, supplierId, date',
+      stockOuts: '++id, productId, date',
+      hppHistory: '++id, productId, date',
+      paymentMethods: '++id, name, category',
+      transactions: '++id, date, &receiptNumber, paymentMethodId, status, orderNumber',
       transactionItems: '++id, transactionId, productId',
-      storeSettings:    '++id',
+      storeSettings: '++id',
     }).upgrade(async (tx) => {
-      // Deduplicate SKUs before applying unique constraint
+      await tx.table('transactions').toCollection().modify((t: any) => {
+        if (!t.status) {
+          t.status = 'completed';
+        }
+      });
+    });
+
+    this.version(4).stores({
+      categories: '++id, name, isDeleted',
+      products: '++id, name, &sku, categoryId, barcode, isDeleted',
+      suppliers: '++id, name, isDeleted',
+      stockIns: '++id, productId, supplierId, date',
+      stockOuts: '++id, productId, date',
+      hppHistory: '++id, productId, date',
+      paymentMethods: '++id, name, category',
+      transactions: '++id, date, &receiptNumber, paymentMethodId, status, orderNumber',
+      transactionItems: '++id, transactionId, productId',
+      storeSettings: '++id',
+    }).upgrade(async (tx) => {
       const prodTable = tx.table('products');
       const allProducts = await prodTable.toArray();
-      const seenSku = new Map<string, number>(); // sku -> first occurrence index
 
-      for (const p of allProducts) {
-        const sku = (p as any).sku as string | undefined;
-        if (!sku || sku.trim() === '') continue;
+      const usedSku = new Set<string>();
 
-        if (seenSku.has(sku)) {
-          // Duplicate SKU found — append suffix to make unique
-          let counter = 1;
-          let newSku = `${sku}_dup${counter}`;
-          while (seenSku.has(newSku)) {
-            counter++;
-            newSku = `${sku}_dup${counter}`;
-          }
-          seenSku.set(newSku, (p as any).id);
-          await prodTable.update((p as any).id!, { sku: newSku });
-        } else {
-          seenSku.set(sku, (p as any).id);
+      for (const p of allProducts as any[]) {
+        let sku = p.sku;
+
+        if (!sku || sku.trim() === '') {
+          sku = `SKU-${p.id}`;
         }
+
+        while (usedSku.has(sku)) {
+          sku = `${sku}-${Math.floor(Math.random() * 1000)}`;
+        }
+
+        usedSku.add(sku);
+
+        await prodTable.update(p.id, { sku });
       }
     });
   }
@@ -284,27 +251,67 @@ class PosDatabase extends Dexie {
 
 export const db = new PosDatabase();
 
-// Seed default data
+// === Seed Default Data ===
+
 export async function seedDefaultData() {
   const categoryCount = await db.categories.count();
+
   if (categoryCount === 0) {
     await db.categories.bulkAdd([
-      { name: 'Makanan', color: '#FF6B35', icon: '🍕', createdAt: new Date(), isDeleted: 0, deletedAt: null },
-      { name: 'Minuman', color: '#4ECDC4', icon: '🥤', createdAt: new Date(), isDeleted: 0, deletedAt: null },
-      { name: 'Lainnya', color: '#95A5A6', icon: '📦', createdAt: new Date(), isDeleted: 0, deletedAt: null },
+      {
+        name: 'Makanan',
+        color: '#FF6B35',
+        icon: '🍕',
+        createdAt: new Date(),
+        isDeleted: 0,
+        deletedAt: null,
+      },
+      {
+        name: 'Minuman',
+        color: '#4ECDC4',
+        icon: '🥤',
+        createdAt: new Date(),
+        isDeleted: 0,
+        deletedAt: null,
+      },
+      {
+        name: 'Lainnya',
+        color: '#95A5A6',
+        icon: '📦',
+        createdAt: new Date(),
+        isDeleted: 0,
+        deletedAt: null,
+      },
     ]);
   }
 
   const pmCount = await db.paymentMethods.count();
+
   if (pmCount === 0) {
     await db.paymentMethods.bulkAdd([
-      { name: 'Tunai', category: 'tunai', isDefault: true, createdAt: new Date() },
-      { name: 'Transfer Bank', category: 'transfer', isDefault: false, createdAt: new Date() },
-      { name: 'QRIS', category: 'qris', isDefault: false, createdAt: new Date() },
+      {
+        name: 'Tunai',
+        category: 'tunai',
+        isDefault: true,
+        createdAt: new Date(),
+      },
+      {
+        name: 'Transfer Bank',
+        category: 'transfer',
+        isDefault: false,
+        createdAt: new Date(),
+      },
+      {
+        name: 'QRIS',
+        category: 'qris',
+        isDefault: false,
+        createdAt: new Date(),
+      },
     ]);
   }
 
   const storeCount = await db.storeSettings.count();
+
   if (storeCount === 0) {
     await db.storeSettings.add({
       storeName: 'Toko Saya',
@@ -313,13 +320,7 @@ export async function seedDefaultData() {
       receiptFooter: 'Terima kasih atas kunjungan Anda!',
       onboardingDone: false,
       lastBackupAt: null,
-      deviceId: Date.now().toString(),
+      deviceId: crypto.randomUUID(),
     });
-  } else {
-    // Fallback: if storeSettings exists but has no deviceId, generate one
-    const settings = await db.storeSettings.toCollection().first();
-    if (settings && !settings.deviceId) {
-      await db.storeSettings.update(settings.id!, { deviceId: crypto.randomUUID() });
-    }
   }
 }
