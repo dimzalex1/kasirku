@@ -137,13 +137,41 @@ export default function Kasir() {
     return base;
   };
 
-  const subtotal = cart.reduce((sum, item) => sum + getItemSubtotal(item), 0);
-  const txDiscountAmount = txDiscountType === 'percentage' ? subtotal * (Number(txDiscountValue) || 0) / 100 : txDiscountType === 'nominal' ? Number(txDiscountValue) || 0 : 0;
-  const safeDiscountAmount = Math.min(txDiscountAmount, subtotal);
-  const total = Math.max(0, subtotal - safeDiscountAmount);
-  const paidAmount = Number(paymentAmount) || 0;
-  const change = paidAmount - total;
-  const totalProfit = cart.reduce((sum, item) => sum + (item.product.price - item.product.hpp) * item.qty, 0) - txDiscountAmount;
+  const subtotal = cart.reduce(
+  (sum, item) => sum + getItemSubtotal(item),
+  0
+);
+
+const txDiscountAmount =
+  txDiscountType === 'percentage'
+    ? (subtotal * (Number(txDiscountValue) || 0)) / 100
+    : txDiscountType === 'nominal'
+    ? Number(txDiscountValue) || 0
+    : 0;
+
+// Diskon tidak boleh melebihi subtotal
+const safeDiscountAmount = Math.min(
+  txDiscountAmount,
+  subtotal
+);
+
+const total = Math.max(
+  0,
+  subtotal - safeDiscountAmount
+);
+
+const paidAmount = Number(paymentAmount) || 0;
+
+const change = paidAmount - total;
+
+// Profit juga harus pakai safeDiscountAmount
+const totalProfit =
+  cart.reduce(
+    (sum, item) =>
+      sum +
+      (item.product.price - item.product.hpp) * item.qty,
+    0
+  ) - safeDiscountAmount;
 
   // === Open Bill Operations ===
 
