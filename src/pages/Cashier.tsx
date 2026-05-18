@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Product, type Category, type Transaction, type TransactionItemRecord } from '@/lib/db';
-import { useState, useRef, useEffect } from 'react';
+import { db, type Product, type Transaction, type TransactionItemRecord } from '@/lib/db';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, Plus, Minus, ShoppingCart, X, Percent, Tag, CreditCard, Banknote, Check, ScanBarcode, Package as PackageIcon, ClipboardList, Save, Pencil, User, Hash, Trash2, Barcode } from 'lucide-react';
 import Receipt from '@/components/Receipt';
 import BarcodeScanner from '@/components/BarcodeScanner';
@@ -61,7 +61,10 @@ export default function Kasir() {
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
   const openBills = useLiveQuery(() => db.transactions.where('status').equals('open').reverse().sortBy('date'));
 
-  const cartProductIds = new Set(cart.map(c => c.product.id));
+  const cartProductIds = useMemo(
+  () => new Set(cart.map(c => c.product.id)),
+  [cart]
+);
 
   const filtered = products?.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
@@ -75,7 +78,7 @@ export default function Kasir() {
     setTxDiscountType(null);
     setTxDiscountValue('');
     setPaymentMethodId('');
-    setPaymentAmount('');
+    setPaymentAmount('0');
     setCustomerName('');
     setTableNumber('');
     setRemarks('');
@@ -99,14 +102,25 @@ export default function Kasir() {
   };
 
   const updateQty = (productId: number, delta: number) => {
-    setCart(prev => prev.map(c => {
-      if (c.product.id !== productId) return c;
+  setCart(prev =>
+    prev.flatMap(c => {
+      if (c.product.id !== productId) return [c];
+
       const newQty = c.qty + delta;
-      if (newQty <= 0) return c;
-      if (newQty > c.product.stock) { toast.error('Stok tidak cukup'); return c; }
-      return { ...c, qty: newQty };
-    }));
-  };
+
+      if (newQty <= 0) {
+        return [];
+      }
+
+      if (newQty > c.product.stock) {
+        toast.error('Stok tidak cukup');
+        return [c];
+      }
+
+      return [{ ...c, qty: newQty }];
+    })
+  );
+};
 
   const removeFromCart = (productId: number) => {
     setCart(prev => prev.filter(c => c.product.id !== productId));
@@ -125,7 +139,8 @@ export default function Kasir() {
 
   const subtotal = cart.reduce((sum, item) => sum + getItemSubtotal(item), 0);
   const txDiscountAmount = txDiscountType === 'percentage' ? subtotal * (Number(txDiscountValue) || 0) / 100 : txDiscountType === 'nominal' ? Number(txDiscountValue) || 0 : 0;
-  const total = Math.max(0, subtotal - txDiscountAmount);
+  const safeDiscountAmount = Math.min(txDiscountAmount, subtotal);
+  const total = Math.max(0, subtotal - safeDiscountAmount);
   const paidAmount = Number(paymentAmount) || 0;
   const change = paidAmount - total;
   const totalProfit = cart.reduce((sum, item) => sum + (item.product.price - item.product.hpp) * item.qty, 0) - txDiscountAmount;
