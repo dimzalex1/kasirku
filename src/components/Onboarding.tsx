@@ -126,7 +126,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   };
 
   const handleFinish = async () => {
-
   console.log("Tombol diklik");
 
   if (!storeName.trim()) return;
@@ -134,7 +133,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   setSaving(true);
 
   try {
-
     console.log("Mulai simpan");
 
     const existing = await db.storeSettings.toCollection().first();
@@ -142,52 +140,44 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     console.log("Existing:", existing);
 
     if (existing?.id) {
-
       await db.storeSettings.update(existing.id, {
-  storeName: storeName.trim(),
-  address: address.trim(),
-  phone: phone.trim(),
-  onboardingDone: true,
-  themeColor,
-  deviceId: existing.deviceId || Date.now().toString(),
-});
+        storeName: storeName.trim(),
+        address: address.trim(),
+        phone: phone.trim(),
+        onboardingDone: true,
+        themeColor,
+        deviceId: existing.deviceId || Date.now().toString(),
+      });
     } else {
-
       await db.storeSettings.add({
-  storeName: storeName.trim(),
-  address: address.trim(),
-  phone: phone.trim(),
-  receiptFooter: 'Terima kasih',
-  onboardingDone: true,
-  lastBackupAt: null,
-  themeColor,
-});
-
+        storeName: storeName.trim(),
+        address: address.trim(),
+        phone: phone.trim(),
+        receiptFooter: 'Terima kasih',
+        onboardingDone: true,
+        lastBackupAt: null,
+        themeColor,
+        deviceId: Date.now().toString(),
+      });
     }
 
     console.log("Berhasil simpan");
 
     if (loadDummy) {
-
       await seedDummyData();
-
     }
 
     console.log("Panggil onComplete");
 
     onComplete();
 
-  } catch (error: any) {
-  console.error('ERROR DETAIL:', error);
-  alert(JSON.stringify(error, null, 2));
-}
+  } catch (err) {
+    console.error("ERROR HANDLE FINISH:", err);
+    alert(JSON.stringify(err));
 
   } finally {
-
     setSaving(false);
-
   }
-
 };
 
   return (
