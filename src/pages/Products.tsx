@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from 'react';
-import type { Product, Category } from '@/lib/db';
 
 import {
   getProducts,
@@ -17,7 +16,6 @@ import {
   Package as PackageIcon,
   Camera,
   X,
-  Copy,
 } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -61,9 +59,7 @@ export default function Produk() {
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
   const [dialogOpen, setDialogOpen] = useState(false);
-
   const [deleteId, setDeleteId] = useState<number | null>(null);
-
   const [editProduct, setEditProduct] = useState<any | null>(null);
 
   const [products, setProducts] = useState<any[]>([]);
@@ -100,13 +96,15 @@ export default function Produk() {
   }, []);
 
   const filtered = products.filter((p) => {
+    const productName = p.name || '';
+    const productSku = p.sku || '';
+
     const matchSearch =
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku.toLowerCase().includes(search.toLowerCase());
+      productName.toLowerCase().includes(search.toLowerCase()) ||
+      productSku.toLowerCase().includes(search.toLowerCase());
 
     const matchCategory =
-      filterCategory === 'all' ||
-      p.category_id === Number(filterCategory);
+      filterCategory === 'all' || p.category_id === Number(filterCategory);
 
     return matchSearch && matchCategory;
   });
@@ -136,22 +134,20 @@ export default function Produk() {
   const openEdit = (p: any) => {
     setEditProduct(p);
 
-    setName(p.name);
-    setSku(p.sku);
-    setCategoryId(p.category_id.toString());
-    setPrice(p.price.toString());
-    setHpp(p.hpp.toString());
-    setStock(p.stock.toString());
-    setUnit(p.unit);
+    setName(p.name || '');
+    setSku(p.sku || '');
+    setCategoryId(p.category_id?.toString() || '');
+    setPrice(p.price?.toString() || '');
+    setHpp(p.hpp?.toString() || '');
+    setStock(p.stock?.toString() || '');
+    setUnit(p.unit || 'pcs');
     setBarcode(p.barcode ?? '');
     setPhoto(p.photo ?? undefined);
 
     setDialogOpen(true);
   };
 
-  const handlePhotoSelect = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
 
     if (!file) return;
@@ -174,7 +170,20 @@ export default function Produk() {
   };
 
   const handleSave = async () => {
-    if (!name.trim() || !categoryId || !sku.trim()) return;
+    if (!name.trim()) {
+      toast.error('Nama produk wajib diisi');
+      return;
+    }
+
+    if (!sku.trim()) {
+      toast.error('SKU wajib diisi');
+      return;
+    }
+
+    if (!categoryId) {
+      toast.error('Kategori wajib dipilih');
+      return;
+    }
 
     try {
       const data = {
@@ -191,20 +200,16 @@ export default function Produk() {
 
       if (editProduct?.id) {
         await updateProduct(editProduct.id, data);
-
         toast.success('Produk berhasil diupdate');
       } else {
         await createProduct(data);
-
         toast.success('Produk berhasil ditambahkan');
       }
 
       await loadData();
-
       setDialogOpen(false);
     } catch (err) {
       console.error(err);
-
       toast.error('Gagal menyimpan produk');
     }
   };
@@ -214,13 +219,11 @@ export default function Produk() {
 
     try {
       await deleteProduct(deleteId);
-
       await loadData();
 
       toast.success('Produk berhasil dihapus');
     } catch (err) {
       console.error(err);
-
       toast.error('Gagal menghapus produk');
     }
 
@@ -236,11 +239,7 @@ export default function Produk() {
           Produk
         </h1>
 
-        <Button
-          size="sm"
-          onClick={openAdd}
-          className="h-9 gap-1.5"
-        >
+        <Button size="sm" onClick={openAdd} className="h-9 gap-1.5">
           <Plus className="w-4 h-4" />
           Tambah
         </Button>
@@ -259,10 +258,7 @@ export default function Produk() {
           />
         </div>
 
-        <Select
-          value={filterCategory}
-          onValueChange={setFilterCategory}
-        >
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
           <SelectTrigger className="w-[120px] h-10">
             <SelectValue placeholder="Kategori" />
           </SelectTrigger>
@@ -271,10 +267,7 @@ export default function Produk() {
             <SelectItem value="all">Semua</SelectItem>
 
             {categories?.map((c) => (
-              <SelectItem
-                key={c.id}
-                value={c.id!.toString()}
-              >
+              <SelectItem key={c.id} value={c.id!.toString()}>
                 {c.icon} {c.name}
               </SelectItem>
             ))}
@@ -292,9 +285,7 @@ export default function Produk() {
         <div className="text-center py-12">
           <PackageIcon className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
 
-          <p className="text-sm text-muted-foreground">
-            Belum ada produk
-          </p>
+          <p className="text-sm text-muted-foreground">Belum ada produk</p>
 
           <Button
             variant="outline"
@@ -334,12 +325,8 @@ export default function Produk() {
                         variant="outline"
                         className="text-[10px] shrink-0"
                         style={{
-                          borderColor: getCategoryColor(
-                            p.category_id
-                          ),
-                          color: getCategoryColor(
-                            p.category_id
-                          ),
+                          borderColor: getCategoryColor(p.category_id),
+                          color: getCategoryColor(p.category_id),
                         }}
                       >
                         {getCategoryName(p.category_id)}
@@ -352,11 +339,11 @@ export default function Produk() {
 
                     <div className="flex items-center gap-3 mt-1.5">
                       <span className="text-sm font-bold text-primary">
-                        Rp {p.price.toLocaleString('id-ID')}
+                        Rp {(p.price || 0).toLocaleString('id-ID')}
                       </span>
 
                       <span className="text-xs text-muted-foreground">
-                        HPP: Rp {p.hpp.toLocaleString('id-ID')}
+                        HPP: Rp {(p.hpp || 0).toLocaleString('id-ID')}
                       </span>
                     </div>
 
@@ -399,6 +386,195 @@ export default function Produk() {
           ))}
         </div>
       )}
+
+      {/* Dialog tambah/edit produk */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editProduct ? 'Edit Produk' : 'Tambah Produk'}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Foto produk */}
+            <div className="space-y-2">
+              <Label>Foto Produk</Label>
+
+              <div className="flex items-center gap-3">
+                <div className="w-20 h-20 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+                  {photo ? (
+                    <img
+                      src={photo}
+                      alt="Preview produk"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <PackageIcon className="w-8 h-8 text-muted-foreground/40" />
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Camera className="w-4 h-4 mr-1" />
+                    Pilih
+                  </Button>
+
+                  {photo && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPhoto(undefined)}
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Hapus
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoSelect}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Nama Produk</Label>
+              <Input
+                placeholder="Contoh: Kopi Susu"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>SKU</Label>
+              <Input
+                placeholder="Contoh: KOPI001"
+                value={sku}
+                onChange={(e) => setSku(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Kategori</Label>
+              <Select value={categoryId} onValueChange={setCategoryId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih kategori" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  {categories?.map((c) => (
+                    <SelectItem key={c.id} value={c.id!.toString()}>
+                      {c.icon} {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Harga Jual</Label>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>HPP</Label>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={hpp}
+                  onChange={(e) => setHpp(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Stok</Label>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={stock}
+                  onChange={(e) => setStock(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Satuan</Label>
+                <Input
+                  placeholder="pcs"
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Barcode</Label>
+              <Input
+                placeholder="Opsional"
+                value={barcode}
+                onChange={(e) => setBarcode(e.target.value)}
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setDialogOpen(false)}
+              >
+                Batal
+              </Button>
+
+              <Button className="flex-1" onClick={handleSave}>
+                Simpan
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog konfirmasi hapus */}
+      <AlertDialog
+        open={deleteId !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus produk?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Produk yang dihapus tidak bisa dikembalikan. Apakah kamu yakin?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
